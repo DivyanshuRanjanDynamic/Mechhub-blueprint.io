@@ -39,19 +39,25 @@ You type an idea. Blueprint asks a few clarifying questions (goal, budget, board
 
 ```mermaid
 flowchart LR
-    U([User idea]) --> Q[Clarifying questions]
-    Q --> P{Planner}
-    P -->|Groq| G[gpt-oss-120b]
-    P -->|Claude| C[claude-opus-5-5]
-    P -->|fallback| O[Offline keyword planner]
-    G & C & O --> PL[/"Plan<br/>parts · board · power"/]
-    PL --> B[Deterministic builder]
-    B --> BOM[BOM + sourcing]
-    B --> W[Wiring + pin map]
-    B --> CAD[3D model]
-    B --> FW[Firmware]
-    B --> GD[Assembly guide]
-    BOM & W & CAD & FW & GD --> S[(Upstash Redis)]
+    idea["User idea"] --> ask["Clarifying questions"]
+    ask --> planner{"Planner"}
+    planner -->|Groq| groq["gpt-oss-120b"]
+    planner -->|Claude| claude["claude-opus-5-5"]
+    planner -->|fallback| offline["Offline planner"]
+    groq --> plan["Plan: parts, board, power"]
+    claude --> plan
+    offline --> plan
+    plan --> builder["Deterministic builder"]
+    builder --> bom["BOM and sourcing"]
+    builder --> wiring["Wiring and pin map"]
+    builder --> cad["3D model"]
+    builder --> fw["Firmware"]
+    builder --> guide["Assembly guide"]
+    bom --> store[("Upstash Redis")]
+    wiring --> store
+    cad --> store
+    fw --> store
+    guide --> store
 ```
 
 **The core principle: the AI decides *what* goes in the design, and the engine guarantees *how* it fits together.**
