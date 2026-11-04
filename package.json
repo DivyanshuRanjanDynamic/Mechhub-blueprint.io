@@ -13,10 +13,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx server/selftest.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "e2e:mock-groq": "tsx scripts/e2e.ts --mock-groq"
+    "e2e:mock-groq": "tsx scripts/e2e.ts --mock-groq",
+    "build:vercel": "node scripts/build-vercel.mjs",
+    "test:storage": "tsx scripts/test-storage.ts",
+    "test:vercel": "npm run build:vercel && node scripts/vercel-smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
+    "@upstash/redis": "^1.41.0",
     "dotenv": "^18.0.9",
     "express": "^4.22.3",
     "groq-sdk": "^1.6.0",
@@ -34,8 +38,12 @@
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^5.4.21"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

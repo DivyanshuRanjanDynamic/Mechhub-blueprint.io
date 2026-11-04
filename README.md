@@ -25,11 +25,44 @@ If more than one key is present, Groq wins. Set `MECHHUB_PROVIDER=groq|claude|of
 npm test               # engine self-test: 9 project types × 4 controllers
 npm run e2e:mock-groq  # real-user journey through the Groq backend (local mock, no key needed)
 npm run e2e -- --provider groq   # same journey against the real Groq API
+npm run test:storage  # full API on the Redis backend (in-memory stand-in for Upstash)
+npm run test:vercel   # build the Vercel output and run it locally with Vercel-style routing
 npm run build          # typecheck + production bundle
 npm start              # serve API + built app on :8787
 ```
 
 [TESTING.md](TESTING.md) has the full real-user test script and more prompts to try.
+
+## Deploy to Vercel
+
+The repo deploys with the [Build Output API](https://vercel.com/docs/build-output-api). `vercel.json` runs `npm run build:vercel` (`scripts/build-vercel.mjs`), which writes `.vercel/output/`:
+
+- `static/`: the Vite site
+- `functions/api.func/`: the whole Express API bundled into one Node 22 function, with a 60 s max duration
+- `config.json`: `/api/*` goes to the function, then static files, and every other path falls back to `index.html`
+
+1. **Push the repo to GitHub, GitLab or Bitbucket.** Then in Vercel choose **Add New → Project** and import it. Don't change the build settings; `vercel.json` sets them.
+2. **Add storage.** Go to **Project → Storage → Create Database → Upstash for Redis** (free tier), then **Connect** it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` for you. You can instead set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` yourself.
+3. **Add environment variables** under **Settings → Environment Variables**:
+   - `GROQ_API_KEY`: your key
+   - `MECHHUB_PROVIDER`: `groq`
+   - `GROQ_MODEL`: optional
+
+   Don't upload `.env`; it is gitignored.
+4. **Deploy**, or redeploy after adding the variables, since they only apply to new deployments.
+5. **Check it** at `https://<your-app>.vercel.app/api/health`. You should see `"provider":"groq"` and `"storage":"redis"`.
+
+The four example projects are created on the first request. If `storage` says `file`, Redis isn't connected: the site works, but projects are written to `/tmp` and lost between function instances, and the logs show a warning.
+
+You can deploy from the CLI instead, after setting up the same variables:
+
+```bash
+npx vercel
+```
+
+```bash
+npx vercel --prod
+```
 
 ## Features
 
@@ -54,11 +87,18 @@ server/ai.ts           Shared planner prompt + zod schemas; Claude backend (stru
 server/groq.ts         Groq backend (JSON mode + zod validation, normalisation, one corrective retry)
 server/llm.ts          Picks the provider (MECHHUB_PROVIDER / available keys)
 server/builder.ts      Deterministic Plan → Blueprint: drivers, power, pin allocation, wiring, firmware, CAD, BOM, steps
-server/index.ts        Express API + JSON-file store (data/projects.json)
+server/app.ts          Express API (shared by local and Vercel)
+server/index.ts        Local entry: serves dist/ and listens on :8787
+server/vercel.ts       Vercel function entry
+server/store.ts        Project store: Upstash Redis (production) or data/projects.json (local)
 src/                   React SPA: Home, Workspace (Chat + Overview/Parts/Wiring/3D CAD/Guide/Code)
 src/lib/step.ts        STEP AP214 writer
 scripts/e2e.ts         Real-user end-to-end test (scripted maker persona)
 scripts/mock-groq.ts   Local stand-in for api.groq.com used by the e2e test
+scripts/build-vercel.mjs  Builds .vercel/output (Build Output API)
+scripts/vercel-smoke.mjs  Runs that output locally with Vercel-style routing
+scripts/test-storage.ts   API against the Redis store (in-memory Upstash stand-in)
+scripts/groq-budget.ts    Tokens per action vs. your Groq rate limits
 ```
 
 The planner (Groq, Claude or offline) decides only what goes into the design. Everything that has to be electrically and mechanically consistent is derived deterministically in `builder.ts`. That covers:

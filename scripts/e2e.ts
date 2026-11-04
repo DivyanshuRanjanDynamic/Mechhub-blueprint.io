@@ -94,6 +94,8 @@ async function startServer(): Promise<ChildProcess | null> {
     MECHHUB_PROVIDER: provider,
   };
   if (mockGroq) Object.assign(env, { GROQ_API_KEY: "mock-key", GROQ_BASE_URL: "http://localhost:8898" });
+  // Keep test projects out of a real Redis configured in .env (dotenv never overrides set variables)
+  Object.assign(env, { UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "" });
   const tsx = path.resolve("node_modules/tsx/dist/cli.mjs");
   const child = spawn(process.execPath, [tsx, "server/index.ts"], { env, stdio: ["ignore", "pipe", "pipe"] });
   child.stderr?.on("data", (d) => process.stderr.write(`  [server] ${d}`));
